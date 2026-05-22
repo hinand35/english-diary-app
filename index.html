@@ -290,6 +290,71 @@
             .stats-grid { grid-template-columns: repeat(2,1fr); }
             .bubble { max-width: 90%; }
         }
+
+        /* ── LEVEL ── */
+        .level-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all .2s;
+        }
+        .level-btn .lv-label { font-weight: 800; font-size: 0.95em; }
+        .level-btn .lv-desc { font-size: 0.65em; color: #a0aec0; margin-top: 2px; line-height: 1.3; }
+        .level-btn.active { border-color: var(--level-color); background: var(--level-color); color: white; }
+        .level-btn.active .lv-desc { color: rgba(255,255,255,0.8); }
+
+        /* ── STREAK ── */
+        .streak-bar {
+            background: white;
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .streak-item { text-align: center; }
+        .streak-num { font-size: 1.6em; font-weight: 800; color: var(--primary); line-height: 1; }
+        .streak-lbl { font-size: 0.68em; color: var(--text-light); margin-top: 3px; }
+
+        /* ── MY LOG ── */
+        #view-mylog { background: var(--bg); }
+        .mylog-header {
+            background: linear-gradient(135deg, #6c63ff 0%, #a8a4ff 100%);
+            padding: 14px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 10;
+            color: white;
+        }
+        .mylog-entry {
+            background: white;
+            border-radius: 14px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }
+        .mylog-entry-header {
+            padding: 12px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .mylog-entry-header:hover { background: #fafafa; }
+        .mylog-date { font-weight: 700; color: var(--primary); font-size: 0.85em; }
+        .mylog-topic { font-size: 0.75em; color: var(--text-light); margin-top: 2px; }
+        .mylog-body { padding: 14px 16px; display: none; }
+        .mylog-body.open { display: block; }
+        .mylog-section { margin-bottom: 12px; }
+        .mylog-section-label { font-size: 0.72em; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .mylog-diary { background: #f8f9ff; border-radius: 8px; padding: 10px 12px; font-size: 0.88em; line-height: 1.7; white-space: pre-wrap; }
+        .mylog-response { background: #f0fff4; border-radius: 8px; padding: 10px 12px; font-size: 0.85em; line-height: 1.7; white-space: pre-wrap; color: #2d6a4f; }
+        .mylog-badge { font-size: 0.7em; background: #eef2ff; color: var(--primary); padding: 2px 8px; border-radius: 10px; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -323,6 +388,26 @@
 
     <div class="container">
 
+        <!-- Streak Bar -->
+        <div class="streak-bar">
+            <div class="streak-item">
+                <div class="streak-num" id="streak-count">0</div>
+                <div class="streak-lbl">🔥 継続日数</div>
+            </div>
+            <div class="streak-item">
+                <div class="streak-num" id="total-count">0</div>
+                <div class="streak-lbl">📝 総投稿数</div>
+            </div>
+            <div class="streak-item" style="cursor:pointer;" onclick="showMyLog()">
+                <div class="streak-num" style="font-size:1.3em;">📖</div>
+                <div class="streak-lbl" style="color:var(--primary); font-weight:700;">マイログ</div>
+            </div>
+        </div>
+
+        <!-- Level Selector -->
+        <div id="level-selector" style="display:flex; gap:8px; margin-bottom:14px;">
+        </div>
+
         <!-- Topic -->
         <div class="topic-card">
             <div class="topic-label">📌 今日のテーマ</div>
@@ -355,6 +440,22 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- ========== MY LOG ========== -->
+<div id="view-mylog" class="view">
+    <div class="mylog-header">
+        <div>
+            <div style="font-weight:800; font-size:1.05em;">📖 マイログ</div>
+            <div id="mylog-subtitle" style="font-size:0.75em; opacity:0.8; margin-top:2px;"></div>
+        </div>
+        <button class="btn-sm" onclick="showView('view-main')">← 戻る</button>
+    </div>
+    <div class="container" style="padding-top:16px;">
+        <div id="mylog-list">
+            <div class="empty-state"><div class="empty-icon">⏳</div><div>読み込み中...</div></div>
+        </div>
     </div>
 </div>
 
@@ -435,22 +536,63 @@ const LOG_KEY    = 'ej_logs_v1';
 const NAME_KEY   = 'ej_student';
 const APIKEY_KEY = 'ej_apikey';
 
-const TOPICS = [
-    { jp:'今夜の夕食について書いてみよう',     en:'What did you have for dinner tonight?' },
-    { jp:'今日の天気と気分について',            en:'How was the weather today? How did you feel?' },
-    { jp:'好きな食べ物について',                en:'What is your favorite food and why?' },
-    { jp:'週末にしたいことについて',            en:'What do you want to do this weekend?' },
-    { jp:'最近嬉しかったこと・良かったこと',    en:'What made you happy or excited recently?' },
-    { jp:'好きな季節について',                  en:'What is your favorite season and why?' },
-    { jp:'今日の学校・仕事について',            en:'What happened at school or work today?' },
-    { jp:'自分の趣味について',                  en:'What are your hobbies? Tell me more!' },
-    { jp:'ペットや好きな動物について',           en:'Do you have a pet? What animal do you like?' },
-    { jp:'好きな映画・ドラマについて',           en:'What is your favorite movie or TV show?' },
-    { jp:'最近行った場所について',              en:'Where did you go recently? How was it?' },
-    { jp:'自分の夢・目標について',              en:'What is your dream or goal in life?' },
-    { jp:'今日買ったもの・ほしいものについて',   en:'What did you buy today, or what do you want?' },
-    { jp:'今朝の朝ごはんについて',              en:'What did you have for breakfast this morning?' },
-];
+const TOPICS_BY_LEVEL = {
+    beginner: [
+        { jp:'今夜の夕食について書いてみよう',     en:'What did you have for dinner tonight?' },
+        { jp:'今日の天気と気分について',            en:'How was the weather today? How did you feel?' },
+        { jp:'好きな食べ物について',                en:'What is your favorite food and why?' },
+        { jp:'週末にしたいことについて',            en:'What do you want to do this weekend?' },
+        { jp:'最近嬉しかったこと・良かったこと',    en:'What made you happy or excited recently?' },
+        { jp:'好きな季節について',                  en:'What is your favorite season and why?' },
+        { jp:'今日の学校・仕事について',            en:'What happened at school or work today?' },
+        { jp:'自分の趣味について',                  en:'What are your hobbies? Tell me more!' },
+        { jp:'ペットや好きな動物について',           en:'Do you have a pet? What animal do you like?' },
+        { jp:'好きな映画・ドラマについて',           en:'What is your favorite movie or TV show?' },
+        { jp:'最近行った場所について',              en:'Where did you go recently? How was it?' },
+        { jp:'自分の夢・目標について',              en:'What is your dream or goal in life?' },
+        { jp:'今日買ったもの・ほしいものについて',   en:'What did you buy today, or what do you want?' },
+        { jp:'今朝の朝ごはんについて',              en:'What did you have for breakfast this morning?' },
+    ],
+    intermediate: [
+        { jp:'SNSが人間関係に与える影響',           en:'How do social media affect our relationships?' },
+        { jp:'リモートワークのメリット・デメリット', en:'What are the pros and cons of remote work?' },
+        { jp:'最近気になったニュースについて',       en:'Describe a recent news story that caught your attention.' },
+        { jp:'環境問題と自分にできること',           en:'What environmental issues concern you? What can you do?' },
+        { jp:'教育の目的とは何か',                  en:'What do you think is the purpose of education?' },
+        { jp:'グローバル化が日本社会に与える影響',   en:'How has globalization affected Japanese society?' },
+        { jp:'食文化と国際理解について',             en:'How does food culture help us understand other countries?' },
+        { jp:'テクノロジーと人間の仕事の未来',       en:'How is technology changing the future of work?' },
+        { jp:'健康的なライフスタイルとは',           en:'What does a healthy lifestyle mean to you?' },
+        { jp:'観光業と地域経済の関係',               en:'How does tourism affect local economies?' },
+        { jp:'英語を学ぶ理由と目標',                en:'Why are you learning English? What are your goals?' },
+        { jp:'ジェネレーションギャップについて',     en:'How do you experience the generation gap in your life?' },
+    ],
+    advanced: [
+        { jp:'AIが社会・経済に与える影響',           en:'Analyze the impact of AI on society and the economy.' },
+        { jp:'気候変動への国際的な取り組み',         en:'Evaluate international efforts to address climate change.' },
+        { jp:'民主主義の危機と現代政治',             en:'Discuss the challenges facing democracy in the modern world.' },
+        { jp:'経済格差の拡大とその解決策',           en:'Examine the causes and solutions for growing economic inequality.' },
+        { jp:'量子コンピュータが変える未来',         en:'How might quantum computing transform our world?' },
+        { jp:'宇宙開発の意義と課題',                en:'What are the merits and challenges of space exploration?' },
+        { jp:'グローバルサプライチェーンの脆弱性',   en:'Discuss the vulnerabilities exposed in global supply chains.' },
+        { jp:'医療倫理とテクノロジー（ゲノム編集など）', en:'Explore ethical dilemmas in modern medicine and biotechnology.' },
+        { jp:'教育格差と社会流動性',                en:'How does educational inequality affect social mobility?' },
+        { jp:'核エネルギー政策の是非',               en:'Assess the role of nuclear energy in addressing climate change.' },
+        { jp:'移民・難民問題と国際秩序',             en:'How should the international community address migration and refugee crises?' },
+        { jp:'メディアリテラシーとフェイクニュース', en:'How can we combat misinformation in the digital age?' },
+    ]
+};
+
+const LEVEL_LABELS = {
+    beginner:     { label:'初級', color:'#48bb78', desc:'日常の話題を3文から' },
+    intermediate: { label:'中級', color:'#ed8936', desc:'社会・時事テーマ（英検2〜準1級）' },
+    advanced:     { label:'上級', color:'#9f7aea', desc:'論文・専門テーマ（英検1級・IELTS）' },
+};
+
+let currentLevel = localStorage.getItem('ej_level') || 'beginner';
+
+function getTopics() { return TOPICS_BY_LEVEL[currentLevel]; }
+const TOPICS = TOPICS_BY_LEVEL.beginner; // fallback
 
 const SYSTEM_PROMPT = `あなたは優しく明るい英語コーチです。英語を始めたばかりの初心者の生徒さんの英語日記を添削します。
 
@@ -492,7 +634,9 @@ function init() {
     studentName = localStorage.getItem(NAME_KEY) || '';
     if (studentName) {
         document.getElementById('name-badge').textContent = studentName;
-        randomTopic();
+        renderLevelSelector();
+        setLevel(currentLevel);
+        renderStreak();
         showView('view-main');
     } else {
         showView('view-setup');
@@ -516,26 +660,52 @@ function startApp() {
     studentName = name;
     localStorage.setItem(NAME_KEY, name);
     document.getElementById('name-badge').textContent = name;
-    randomTopic();
+    renderLevelSelector();
+    setLevel(currentLevel);
     showView('view-main');
 }
 
 // ──────────────────────────────────────────
 // TOPICS
 // ──────────────────────────────────────────
+function renderLevelSelector() {
+    const el = document.getElementById('level-selector');
+    el.innerHTML = Object.entries(LEVEL_LABELS).map(([key, val]) => `
+        <button class="level-btn ${currentLevel === key ? 'active' : ''}"
+            style="--level-color:${val.color}"
+            onclick="setLevel('${key}')">
+            <div class="lv-label">${val.label}</div>
+            <div class="lv-desc">${val.desc}</div>
+        </button>
+    `).join('');
+}
+
+function setLevel(level) {
+    currentLevel = level;
+    localStorage.setItem('ej_level', level);
+    renderLevelSelector();
+    randomTopic();
+    // トピックカードの色も変える
+    const colors = { beginner:'135deg, #f6d365 0%, #fda085 100%', intermediate:'135deg, #f093fb 0%, #f5576c 100%', advanced:'135deg, #4facfe 0%, #00f2fe 100%' };
+    document.querySelector('.topic-card').style.background = `linear-gradient(${colors[level]})`;
+}
+
 function randomTopic() {
-    topicIdx = Math.floor(Math.random() * TOPICS.length);
+    const topics = getTopics();
+    topicIdx = Math.floor(Math.random() * topics.length);
     setTopic();
 }
 function newTopic() {
+    const topics = getTopics();
     let n;
-    do { n = Math.floor(Math.random() * TOPICS.length); } while (n === topicIdx);
+    do { n = Math.floor(Math.random() * topics.length); } while (n === topicIdx);
     topicIdx = n;
     setTopic();
 }
 function setTopic() {
-    document.getElementById('topic-jp').textContent = TOPICS[topicIdx].jp;
-    document.getElementById('topic-en').textContent = TOPICS[topicIdx].en;
+    const topics = getTopics();
+    document.getElementById('topic-jp').textContent = topics[topicIdx].jp;
+    document.getElementById('topic-en').textContent = topics[topicIdx].en;
 }
 
 // ──────────────────────────────────────────
@@ -585,8 +755,11 @@ async function submitDiary() {
             body: JSON.stringify({
                 message: userMessage,
                 student: studentName,
-                topic: TOPICS[topicIdx].jp,
-                diary: text
+                topic: getTopics()[topicIdx].jp,
+                diary: text,
+                level: currentLevel,
+                totalCount: getStreakData().total,
+                streak: getStreakData().streak
             })
         });
 
@@ -600,7 +773,8 @@ async function submitDiary() {
         const aiText = data.text || '返答を取得できませんでした。';
 
         await addBubbleAnimated('ai', aiText);
-        saveLog({ student: studentName, diary: text, response: aiText, topic: TOPICS[topicIdx].jp });
+        updateStreak();
+        saveLog({ student: studentName, diary: text, response: aiText, topic: getTopics()[topicIdx].jp });
         document.getElementById('chat-wrap').lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
     } catch (err) {
@@ -697,6 +871,83 @@ function renderApiStatus() {
         el.textContent = '⚠️ 未設定です。ここでAPIキーを入力してください。';
         el.style.color = '#ed8936';
     }
+}
+
+// ── STREAK ──
+function getStreakData() {
+    try { return JSON.parse(localStorage.getItem('ej_streak') || '{"total":0,"streak":0,"lastDate":""}'); } catch { return {total:0,streak:0,lastDate:''}; }
+}
+function updateStreak() {
+    const d = getStreakData();
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now()-86400000).toDateString();
+    d.total = (d.total || 0) + 1;
+    if (d.lastDate === today) {
+        // same day, no streak change
+    } else if (d.lastDate === yesterday) {
+        d.streak = (d.streak || 0) + 1;
+    } else {
+        d.streak = 1;
+    }
+    d.lastDate = today;
+    localStorage.setItem('ej_streak', JSON.stringify(d));
+    renderStreak();
+    return d;
+}
+function renderStreak() {
+    const d = getStreakData();
+    document.getElementById('streak-count').textContent = d.streak || 0;
+    document.getElementById('total-count').textContent = d.total || 0;
+}
+
+// ── MY LOG ──
+async function showMyLog() {
+    showView('view-mylog');
+    document.getElementById('mylog-subtitle').textContent = studentName + 'さんの記録';
+    const list = document.getElementById('mylog-list');
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div>読み込み中...</div></div>';
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/logs?student=eq.${encodeURIComponent(studentName)}&order=created_at.desc`,
+            { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+        );
+        const logs = await res.json();
+        if (!logs.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>まだ日記がありません<br>最初の1文を書いてみよう！</div></div>';
+            return;
+        }
+        list.innerHTML = logs.map((l, i) => `
+            <div class="mylog-entry">
+                <div class="mylog-entry-header" onclick="toggleLog(${i})">
+                    <div>
+                        <div class="mylog-date">${fmtDateFull(l.created_at)}</div>
+                        <div class="mylog-topic">📌 ${esc(l.topic || '')}</div>
+                    </div>
+                    <span class="mylog-badge">${(l.diary||'').trim().split(/\s+/).length}語</span>
+                </div>
+                <div class="mylog-body" id="mylog-body-${i}">
+                    <div class="mylog-section">
+                        <div class="mylog-section-label">✍️ 書いた英語</div>
+                        <div class="mylog-diary">${esc(l.diary || '')}</div>
+                    </div>
+                    <div class="mylog-section">
+                        <div class="mylog-section-label">🧑‍🏫 AIの返答</div>
+                        <div class="mylog-response">${esc(l.response || '')}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>読み込みエラー</div></div>';
+    }
+}
+function toggleLog(i) {
+    const body = document.getElementById(`mylog-body-${i}`);
+    body.classList.toggle('open');
+}
+function fmtDateFull(iso) {
+    const d = new Date(iso);
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
 const SUPABASE_URL = 'https://tjyhvexttfbwgimiffvz.supabase.co';
