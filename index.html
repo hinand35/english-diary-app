@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✏️ 英語日記 添削アプリ</title>
+    <style>
+        :root {
+            --primary: #6c63ff;
+            --primary-light: #a8a4ff;
+            --orange: #fda085;
+            --yellow: #f6d365;
+            --bg: #f0f2ff;
+            --card: #ffffff;
+            --text: #2d3748;
+            --text-light: #a0aec0;
+            --green: #48bb78;
+            --red: #fc8181;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            color: var(--text);
+        }
+        .view { display: none; min-height: 100vh; }
+        .view.active { display: block; }
+
+        /* ── SETUP ── */
+        #view-setup {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        #view-setup.active { display: flex; }
+        .setup-card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px 32px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+        .setup-logo { font-size: 3.5em; margin-bottom: 12px; }
+        .setup-title { font-size: 1.7em; font-weight: 800; color: var(--primary); margin-bottom: 6px; }
+        .setup-sub { color: var(--text-light); line-height: 1.7; margin-bottom: 28px; font-size: 0.9em; }
+
+        /* ── HEADER ── */
+        .app-header {
+            background: linear-gradient(135deg, #6c63ff 0%, #a8a4ff 100%);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 12px rgba(108,99,255,0.35);
+            position: sticky; top: 0; z-index: 10;
+        }
+        .app-header h1 { color: white; font-size: 1.15em; font-weight: 800; letter-spacing: -0.3px; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
+        .name-badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.82em;
+            font-weight: 600;
+        }
+        .btn-sm {
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.75em;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-sm:hover { background: rgba(255,255,255,0.28); }
+
+        /* ── CONTAINER ── */
+        .container { max-width: 680px; margin: 0 auto; padding: 16px; }
+
+        /* ── CARDS ── */
+        .card {
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+        }
+
+        /* ── TOPIC ── */
+        .topic-card {
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 14px;
+            color: white;
+        }
+        .topic-label {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            opacity: 0.85;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .topic-jp { font-size: 1.1em; font-weight: 800; margin-bottom: 4px; }
+        .topic-en { font-size: 0.88em; opacity: 0.92; margin-bottom: 14px; font-style: italic; }
+        .btn-topic {
+            background: rgba(255,255,255,0.28);
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78em;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-topic:hover { background: rgba(255,255,255,0.4); }
+
+        /* ── TEXTAREA ── */
+        .diary-textarea {
+            width: 100%;
+            min-height: 130px;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+            line-height: 1.75;
+            color: var(--text);
+        }
+        .diary-textarea:focus { border-color: var(--primary); }
+        .diary-textarea::placeholder { color: #c5cfe0; line-height: 1.75; }
+        .counter-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .counter { font-size: 0.78em; color: var(--text-light); }
+        .counter strong { color: var(--primary); }
+
+        /* ── BUTTONS ── */
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, #6c63ff 0%, #a8a4ff 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: opacity .2s, transform .1s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-primary:hover { opacity: 0.92; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 10px 28px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .btn-outline:hover { background: var(--primary); color: white; }
+
+        /* ── CHAT ── */
+        #chat-area { display: none; }
+        .chat-wrap { display: flex; flex-direction: column; gap: 14px; }
+        .chat-msg { display: flex; gap: 10px; animation: fadeUp .35s ease; }
+        .chat-msg.user { flex-direction: row-reverse; }
+        .avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25em; flex-shrink: 0;
+        }
+        .avatar.ai { background: linear-gradient(135deg, #6c63ff, #a8a4ff); }
+        .avatar.user { background: linear-gradient(135deg, #f6d365, #fda085); }
+        .bubble {
+            max-width: 85%;
+            padding: 13px 16px;
+            border-radius: 16px;
+            line-height: 1.75;
+            font-size: 0.93em;
+        }
+        .bubble.ai {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            border-bottom-left-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .bubble.user {
+            background: linear-gradient(135deg, #6c63ff, #a8a4ff);
+            color: white;
+            border-bottom-right-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .typing-dots { display: flex; gap: 5px; padding: 4px 2px; align-items: center; }
+        .dot {
+            width: 8px; height: 8px;
+            background: #c4b5fd;
+            border-radius: 50%;
+            animation: bounce 1.3s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: .2s; }
+        .dot:nth-child(3) { animation-delay: .4s; }
+        @keyframes bounce {
+            0%,60%,100% { transform: translateY(0); opacity:.5; }
+            30% { transform: translateY(-7px); opacity:1; }
+        }
+        @keyframes fadeUp {
+            from { transform: translateY(8px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .retry-row { text-align: center; padding: 6px 0 4px; }
+
+        /* ── INPUT ── */
+        .input-label { font-size: 0.82em; font-weight: 700; color: var(--text-light); margin-bottom: 6px; display: block; }
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .input-field:focus { border-color: var(--primary); }
+
+        /* ── ADMIN ── */
+        #view-admin-login {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: #1a202c;
+        }
+        #view-admin-login.active { display: flex; }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 36px 32px;
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .admin-header {
+            background: #2d3748;
+            padding: 14px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .admin-header-title { color: white; font-weight: 800; font-size: 1.05em; }
+        .admin-header-sub { color: #a0aec0; font-size: 0.72em; margin-top: 2px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: white; border-radius: 14px; padding: 16px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .stat-num { font-size: 2.2em; font-weight: 800; color: var(--primary); line-height: 1; }
+        .stat-lbl { font-size: 0.72em; color: var(--text-light); margin-top: 5px; }
+        .api-card { background: white; border-radius: 14px; padding: 18px; margin-bottom: 14px; border: 2px solid #e8e8ff; }
+        .api-card h4 { color: var(--primary); font-size: 0.9em; margin-bottom: 12px; }
+        .api-row { display: flex; gap: 8px; }
+        .btn-save { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 10px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+        .log-table-wrap { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .log-table-header { padding: 14px 18px; border-bottom: 1px solid #f0f0f0; font-weight: 700; font-size: 0.9em; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82em; }
+        th { background: #f7f8fc; padding: 10px 14px; text-align: left; color: var(--text-light); font-size: 0.78em; font-weight: 700; border-bottom: 2px solid #eee; }
+        td { padding: 11px 14px; border-bottom: 1px solid #f5f5f5; vertical-align: top; }
+        tr:hover td { background: #fafafa; }
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75em; font-weight: 700; }
+        .tag-s { background: #eef2ff; color: var(--primary); }
+        .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 200px; }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-light); }
+        .empty-icon { font-size: 2.5em; margin-bottom: 10px; }
+        #api-status { font-size: 0.78em; margin-top: 6px; }
+
+        @media(max-width:480px) {
+            .stats-grid { grid-template-columns: repeat(2,1fr); }
+            .bubble { max-width: 90%; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========== SETUP ========== -->
+<div id="view-setup" class="view">
+    <div class="setup-card">
+        <div class="setup-logo">✏️</div>
+        <div class="setup-title">英語日記アプリ</div>
+        <p class="setup-sub">毎日少しずつ、英語で日記を書いてみよう！<br>AIの先生が優しく添削してくれます 😊</p>
+        <div style="text-align:left; margin-bottom:16px;">
+            <label class="input-label">あなたのお名前</label>
+            <input id="setup-name" class="input-field" type="text" placeholder="例：田中 花子"
+                onkeydown="if(event.key==='Enter') startApp()" />
+        </div>
+        <button class="btn-primary" onclick="startApp()">
+            <span>はじめる</span><span>→</span>
+        </button>
+    </div>
+</div>
+
+<!-- ========== MAIN ========== -->
+<div id="view-main" class="view">
+    <div class="app-header">
+        <h1>✏️ 英語日記</h1>
+        <div class="header-right">
+            <span class="name-badge" id="name-badge">—</span>
+            <button class="btn-sm" onclick="showAdminLogin()">管理 🔐</button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- Topic -->
+        <div class="topic-card">
+            <div class="topic-label">📌 今日のテーマ</div>
+            <div class="topic-jp" id="topic-jp">今夜の夕食について書いてみよう</div>
+            <div class="topic-en" id="topic-en">What did you have for dinner tonight?</div>
+            <button class="btn-topic" onclick="newTopic()">🔄 別のテーマにする</button>
+        </div>
+
+        <!-- Write -->
+        <div class="card">
+            <textarea id="diary-input" class="diary-textarea"
+                placeholder="英語で書いてみよう！&#10;&#10;例：I had curry and rice for dinner. It was very delicious!&#10;&#10;※ 間違いを気にしなくてOK！書くことが大切です 😊"
+                oninput="updateCounter()"></textarea>
+            <div class="counter-row">
+                <div class="counter"><strong id="word-count">0</strong>語 ／ <strong id="char-count">0</strong>文字</div>
+                <div style="font-size:0.73em; color:#c5cfe0;">3文くらいから始めてみよう</div>
+            </div>
+            <button class="btn-primary" id="submit-btn" onclick="submitDiary()">
+                <span>✉️</span><span>先生に送る</span>
+            </button>
+        </div>
+
+        <!-- Chat -->
+        <div id="chat-area">
+            <div class="card">
+                <div id="chat-wrap" class="chat-wrap"></div>
+            </div>
+            <div class="retry-row">
+                <button class="btn-outline" onclick="retryDiary()">✍️ もう一度書いてみる</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ========== ADMIN LOGIN ========== -->
+<div id="view-admin-login" class="view">
+    <div class="login-card">
+        <div style="font-size:2.8em; margin-bottom:10px;">🔐</div>
+        <h2 style="margin-bottom:6px; color:#2d3748;">管理者ログイン</h2>
+        <p style="color:#a0aec0; font-size:0.83em; margin-bottom:22px;">先生専用のページです</p>
+        <input id="admin-pw" class="input-field" type="password" placeholder="パスワードを入力"
+            style="margin-bottom:12px;" onkeydown="if(event.key==='Enter') checkPw()" />
+        <button class="btn-primary" onclick="checkPw()">ログイン</button>
+        <button class="btn-outline" onclick="showView('view-main')" style="margin-top:10px; width:100%;">戻る</button>
+        <p id="pw-error" style="color:#fc8181; font-size:0.78em; margin-top:8px; display:none;">パスワードが違います</p>
+    </div>
+</div>
+
+<!-- ========== ADMIN ========== -->
+<div id="view-admin" class="view">
+    <div class="admin-header">
+        <div>
+            <div class="admin-header-title">📊 管理ダッシュボード</div>
+            <div class="admin-header-sub">英語日記 添削アプリ</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button onclick="exportCSV()" class="btn-sm">📥 CSV出力</button>
+            <button onclick="clearLogs()" class="btn-sm" style="background:rgba(252,129,129,0.25); border-color:rgba(252,129,129,0.5);">🗑️ ログ削除</button>
+            <button onclick="showView('view-main')" class="btn-sm">← 戻る</button>
+        </div>
+    </div>
+    <div class="container" style="padding-top:18px;">
+
+        <!-- API設定 -->
+        <div class="api-card">
+            <h4>⚙️ Google Gemini APIキー設定（無料）</h4>
+            <div class="api-row">
+                <input id="api-key-input" class="input-field" type="password" placeholder="AIzaSy..." style="flex:1;" />
+                <button class="btn-save" onclick="saveApiKey()">保存</button>
+            </div>
+            <p id="api-status"></p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-lbl">総投稿数</div></div>
+            <div class="stat-card"><div class="stat-num" id="stat-students">0</div><div class="stat-lbl">生徒数</div></div>
+            <div class="stat-card"><div class="stat-num" id="stat-today">0</div><div class="stat-lbl">今日の投稿</div></div>
+        </div>
+
+        <!-- Log -->
+        <div class="log-table-wrap">
+            <div class="log-table-header">📝 投稿ログ（新着順）</div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日時</th>
+                            <th>生徒名</th>
+                            <th>英語日記（Before）</th>
+                            <th>語数</th>
+                            <th>AIの返答（抜粋）</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────
+// CONFIG
+// ──────────────────────────────────────────
+const ADMIN_PW   = 'hinako2024';
+const LOG_KEY    = 'ej_logs_v1';
+const NAME_KEY   = 'ej_student';
+const APIKEY_KEY = 'ej_apikey';
+
+const TOPICS = [
+    { jp:'今夜の夕食について書いてみよう',     en:'What did you have for dinner tonight?' },
+    { jp:'今日の天気と気分について',            en:'How was the weather today? How did you feel?' },
+    { jp:'好きな食べ物について',                en:'What is your favorite food and why?' },
+    { jp:'週末にしたいことについて',            en:'What do you want to do this weekend?' },
+    { jp:'最近嬉しかったこと・良かったこと',    en:'What made you happy or excited recently?' },
+    { jp:'好きな季節について',                  en:'What is your favorite season and why?' },
+    { jp:'今日の学校・仕事について',            en:'What happened at school or work today?' },
+    { jp:'自分の趣味について',                  en:'What are your hobbies? Tell me more!' },
+    { jp:'ペットや好きな動物について',           en:'Do you have a pet? What animal do you like?' },
+    { jp:'好きな映画・ドラマについて',           en:'What is your favorite movie or TV show?' },
+    { jp:'最近行った場所について',              en:'Where did you go recently? How was it?' },
+    { jp:'自分の夢・目標について',              en:'What is your dream or goal in life?' },
+    { jp:'今日買ったもの・ほしいものについて',   en:'What did you buy today, or what do you want?' },
+    { jp:'今朝の朝ごはんについて',              en:'What did you have for breakfast this morning?' },
+];
+
+const SYSTEM_PROMPT = `あなたは優しく明るい英語コーチです。英語を始めたばかりの初心者の生徒さんの英語日記を添削します。
+
+【返答ルール】
+1. まず日本語で温かく褒める（「書いてくれてありがとう！」「頑張りましたね！」など）
+2. 良かった表現があれば具体的に褒める
+3. 添削は最大2か所に絞る（全部直そうとしない）
+4. 添削の説明は日本語でシンプルに（難しい文法用語NG）
+5. 全体を通して励ますトーン
+
+【返答の形式（必ずこの形で）】
+😊 [温かいコメント。書いてくれたことへの感謝と良かった点を日本語で]
+
+✏️ 添削ポイント
+❌ Before: [元の文をそのまま]
+✅ After:  [自然な英語に直した文]
+💡 [直した理由を日本語で一言。シンプルに]
+
+💬 もっと自然な言い方
+"[発展的な英語表現]"
+（[日本語訳]）
+
+🌟 [励ましの一言で締める]
+
+※文章が短くても・文法が崩れていても温かく受け止めてください
+※声で入力した口語的な英語もOKです
+※添削箇所がない場合は「完璧です！」と伝えてください`;
+
+// ──────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────
+let studentName = '';
+let topicIdx = 0;
+
+// ──────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────
+function init() {
+    studentName = localStorage.getItem(NAME_KEY) || '';
+    if (studentName) {
+        document.getElementById('name-badge').textContent = studentName;
+        randomTopic();
+        showView('view-main');
+    } else {
+        showView('view-setup');
+    }
+}
+
+// ──────────────────────────────────────────
+// VIEWS
+// ──────────────────────────────────────────
+function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+// ──────────────────────────────────────────
+// SETUP
+// ──────────────────────────────────────────
+function startApp() {
+    const name = document.getElementById('setup-name').value.trim();
+    if (!name) { alert('お名前を入力してください😊'); return; }
+    studentName = name;
+    localStorage.setItem(NAME_KEY, name);
+    document.getElementById('name-badge').textContent = name;
+    randomTopic();
+    showView('view-main');
+}
+
+// ──────────────────────────────────────────
+// TOPICS
+// ──────────────────────────────────────────
+function randomTopic() {
+    topicIdx = Math.floor(Math.random() * TOPICS.length);
+    setTopic();
+}
+function newTopic() {
+    let n;
+    do { n = Math.floor(Math.random() * TOPICS.length); } while (n === topicIdx);
+    topicIdx = n;
+    setTopic();
+}
+function setTopic() {
+    document.getElementById('topic-jp').textContent = TOPICS[topicIdx].jp;
+    document.getElementById('topic-en').textContent = TOPICS[topicIdx].en;
+}
+
+// ──────────────────────────────────────────
+// COUNTER
+// ──────────────────────────────────────────
+function updateCounter() {
+    const txt = document.getElementById('diary-input').value;
+    const words = txt.trim() === '' ? 0 : txt.trim().split(/\s+/).length;
+    document.getElementById('word-count').textContent = words;
+    document.getElementById('char-count').textContent = txt.length;
+}
+
+// ──────────────────────────────────────────
+// SUBMIT
+// ──────────────────────────────────────────
+async function submitDiary() {
+    const text = document.getElementById('diary-input').value.trim();
+    if (!text) { alert('英語で何か書いてみましょう！どんな短い文でも大丈夫です😊'); return; }
+
+    const apiKey = localStorage.getItem(APIKEY_KEY);
+    if (!apiKey) {
+        alert('⚠️ APIキーが設定されていません。\n管理者ページ（右上の「管理🔐」）でAPIキーを設定してください。');
+        return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span><span>先生が読んでいます…</span>';
+
+    // Show chat area
+    const chatArea = document.getElementById('chat-area');
+    chatArea.style.display = 'block';
+    const wrap = document.getElementById('chat-wrap');
+    wrap.innerHTML = '';
+
+    // User bubble
+    addBubble('user', text);
+
+    // Typing indicator
+    const typingId = 'typing-' + Date.now();
+    wrap.insertAdjacentHTML('beforeend', `
+        <div class="chat-msg ai" id="${typingId}">
+            <div class="avatar ai">🧑‍🏫</div>
+            <div class="bubble ai"><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+        </div>`);
+    wrap.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+    try {
+        const userMessage = `生徒名：${studentName}\nテーマ：${TOPICS[topicIdx].jp}\n\n英語日記：\n${text}`;
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                    contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+                    generationConfig: { maxOutputTokens: 1200 }
+                })
+            }
+        );
+
+        document.getElementById(typingId)?.remove();
+
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error?.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '返答を取得できませんでした。';
+
+        await addBubbleAnimated('ai', aiText);
+        saveLog({ student: studentName, diary: text, response: aiText, topic: TOPICS[topicIdx].jp });
+        document.getElementById('chat-wrap').lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+    } catch (err) {
+        document.getElementById(typingId)?.remove();
+        addBubble('ai', `⚠️ エラーが発生しました：\n${err.message}\n\nAPIキーを確認してください（管理🔐ページで設定できます）`);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<span>✉️</span><span>先生に送る</span>';
+}
+
+// ──────────────────────────────────────────
+// CHAT HELPERS
+// ──────────────────────────────────────────
+function addBubble(role, text) {
+    const wrap = document.getElementById('chat-wrap');
+    const initials = role === 'ai' ? '🧑‍🏫' : (studentName.charAt(0) || '👤');
+    const div = document.createElement('div');
+    div.className = `chat-msg ${role}`;
+    div.innerHTML = `<div class="avatar ${role}">${initials}</div><div class="bubble ${role}">${esc(text)}</div>`;
+    wrap.appendChild(div);
+    return div;
+}
+
+async function addBubbleAnimated(role, text) {
+    const wrap = document.getElementById('chat-wrap');
+    const initials = role === 'ai' ? '🧑‍🏫' : studentName.charAt(0);
+    const div = document.createElement('div');
+    div.className = `chat-msg ${role}`;
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${role}`;
+    div.innerHTML = `<div class="avatar ${role}">${initials}</div>`;
+    div.appendChild(bubble);
+    wrap.appendChild(div);
+
+    // typewriter
+    await new Promise(resolve => {
+        let i = 0;
+        const speed = 6;
+        function type() {
+            if (i < text.length) {
+                bubble.textContent = text.substring(0, ++i);
+                setTimeout(type, speed);
+            } else resolve();
+        }
+        type();
+    });
+}
+
+function retryDiary() {
+    document.getElementById('diary-input').value = '';
+    document.getElementById('chat-area').style.display = 'none';
+    document.getElementById('word-count').textContent = '0';
+    document.getElementById('char-count').textContent = '0';
+    newTopic();
+    document.getElementById('diary-input').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ──────────────────────────────────────────
+// ADMIN
+// ──────────────────────────────────────────
+function showAdminLogin() {
+    document.getElementById('admin-pw').value = '';
+    document.getElementById('pw-error').style.display = 'none';
+    showView('view-admin-login');
+}
+function checkPw() {
+    if (document.getElementById('admin-pw').value === ADMIN_PW) {
+        showView('view-admin');
+        loadAdmin();
+    } else {
+        document.getElementById('pw-error').style.display = 'block';
+    }
+}
+
+function saveApiKey() {
+    const k = document.getElementById('api-key-input').value.trim();
+    if (!k) { alert('APIキーを入力してください'); return; }
+    localStorage.setItem(APIKEY_KEY, k);
+    renderApiStatus();
+    alert('✅ APIキーを保存しました！');
+}
+
+function renderApiStatus() {
+    const k = localStorage.getItem(APIKEY_KEY);
+    const el = document.getElementById('api-status');
+    if (!el) return;
+    if (k) {
+        el.textContent = `✅ 設定済み（${k.substring(0, 15)}...）`;
+        el.style.color = '#48bb78';
+        document.getElementById('api-key-input').value = k;
+    } else {
+        el.textContent = '⚠️ 未設定です。ここでAPIキーを入力してください。';
+        el.style.color = '#ed8936';
+    }
+}
+
+function loadAdmin() {
+    renderApiStatus();
+    const logs = getLogs();
+    const today = new Date().toDateString();
+    const students = new Set(logs.map(l => l.student)).size;
+    const todayN = logs.filter(l => new Date(l.timestamp).toDateString() === today).length;
+    document.getElementById('stat-total').textContent = logs.length;
+    document.getElementById('stat-students').textContent = students;
+    document.getElementById('stat-today').textContent = todayN;
+
+    const tbody = document.getElementById('log-tbody');
+    if (!logs.length) {
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📭</div><div>まだ投稿がありません</div></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = [...logs].reverse().map(l => {
+        const wc = l.diary.trim().split(/\s+/).length;
+        return `<tr>
+            <td style="white-space:nowrap; color:#a0aec0;">${fmtDate(l.timestamp)}</td>
+            <td><span class="tag tag-s">${esc(l.student)}</span></td>
+            <td><div class="clamp2">${esc(l.diary)}</div></td>
+            <td style="text-align:center; font-weight:700; color:var(--primary);">${wc}</td>
+            <td><div class="clamp2" style="color:#718096;">${esc(l.response)}</div></td>
+        </tr>`;
+    }).join('');
+}
+
+function exportCSV() {
+    const logs = getLogs();
+    if (!logs.length) { alert('ログがありません'); return; }
+    const hdr = ['日時','生徒名','テーマ','英語日記（Before）','語数','AIの返答'];
+    const rows = logs.map(l => [
+        fmtDate(l.timestamp), l.student, l.topic || '',
+        l.diary.replace(/"/g,'""'),
+        l.diary.trim().split(/\s+/).length,
+        l.response.replace(/"/g,'""')
+    ]);
+    const csv = [hdr, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `diary_log_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+}
+
+function clearLogs() {
+    if (!confirm('⚠️ 全ログを削除しますか？元に戻せません。')) return;
+    localStorage.removeItem(LOG_KEY);
+    loadAdmin();
+}
+
+// ──────────────────────────────────────────
+// LOGS
+// ──────────────────────────────────────────
+function getLogs() {
+    try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch { return []; }
+}
+function saveLog(entry) {
+    const logs = getLogs();
+    logs.push({ ...entry, timestamp: new Date().toISOString() });
+    localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+}
+
+// ──────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────
+function esc(s) {
+    return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(iso) {
+    const d = new Date(iso);
+    return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ──────────────────────────────────────────
+// START
+// ──────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
