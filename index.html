@@ -555,12 +555,6 @@ async function submitDiary() {
     const text = document.getElementById('diary-input').value.trim();
     if (!text) { alert('英語で何か書いてみましょう！どんな短い文でも大丈夫です😊'); return; }
 
-    const apiKey = localStorage.getItem(APIKEY_KEY);
-    if (!apiKey) {
-        alert('⚠️ APIキーが設定されていません。\n管理者ページ（右上の「管理🔐」）でAPIキーを設定してください。');
-        return;
-    }
-
     const btn = document.getElementById('submit-btn');
     btn.disabled = true;
     btn.innerHTML = '<span>⏳</span><span>先生が読んでいます…</span>';
@@ -585,27 +579,20 @@ async function submitDiary() {
 
     try {
         const userMessage = `生徒名：${studentName}\nテーマ：${TOPICS[topicIdx].jp}\n\n英語日記：\n${text}`;
-        const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
-            {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-                    contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-                    generationConfig: { maxOutputTokens: 1200 }
-                })
-            }
-        );
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ message: userMessage })
+        });
 
         document.getElementById(typingId)?.remove();
 
         if (!res.ok) {
             const e = await res.json().catch(() => ({}));
-            throw new Error(e.error?.message || `HTTP ${res.status}`);
+            throw new Error(e.error || `HTTP ${res.status}`);
         }
         const data = await res.json();
-        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '返答を取得できませんでした。';
+        const aiText = data.text || '返答を取得できませんでした。';
 
         await addBubbleAnimated('ai', aiText);
         saveLog({ student: studentName, diary: text, response: aiText, topic: TOPICS[topicIdx].jp });
