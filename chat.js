@@ -114,7 +114,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
           contents: [{ role: 'user', parts: [{ text: message }] }],
-          generationConfig: { maxOutputTokens: 1200 }
+          generationConfig: { maxOutputTokens: 3000 }
         })
       }
     );
