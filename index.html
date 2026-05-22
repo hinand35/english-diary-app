@@ -582,7 +582,12 @@ async function submitDiary() {
         const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ message: userMessage })
+            body: JSON.stringify({
+                message: userMessage,
+                student: studentName,
+                topic: TOPICS[topicIdx].jp,
+                diary: text
+            })
         });
 
         document.getElementById(typingId)?.remove();
@@ -694,50 +699,71 @@ function renderApiStatus() {
     }
 }
 
-function loadAdmin() {
-    renderApiStatus();
-    const logs = getLogs();
-    const today = new Date().toDateString();
-    const students = new Set(logs.map(l => l.student)).size;
-    const todayN = logs.filter(l => new Date(l.timestamp).toDateString() === today).length;
-    document.getElementById('stat-total').textContent = logs.length;
-    document.getElementById('stat-students').textContent = students;
-    document.getElementById('stat-today').textContent = todayN;
+const SUPABASE_URL = 'https://tjyhvexttfbwgimiffvz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqeWh2ZXh0dGZid2dpbWlmZnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MzM5NTUsImV4cCI6MjA5NTAwOTk1NX0.qnmqHXXJDtzFOe28SUpW0oGqU2HLTIb3xdAiA4EALHs';
 
+async function loadAdmin() {
+    renderApiStatus();
     const tbody = document.getElementById('log-tbody');
-    if (!logs.length) {
-        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📭</div><div>まだ投稿がありません</div></div></td></tr>`;
-        return;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">⏳</div><div>読み込み中...</div></div></td></tr>`;
+
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/logs?order=created_at.desc`, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+        });
+        const logs = await res.json();
+
+        const today = new Date().toDateString();
+        const students = new Set(logs.map(l => l.student)).size;
+        const todayN = logs.filter(l => new Date(l.created_at).toDateString() === today).length;
+        document.getElementById('stat-total').textContent = logs.length;
+        document.getElementById('stat-students').textContent = students;
+        document.getElementById('stat-today').textContent = todayN;
+
+        if (!logs.length) {
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📭</div><div>まだ投稿がありません</div></div></td></tr>`;
+            return;
+        }
+        tbody.innerHTML = logs.map(l => {
+            const wc = (l.diary || '').trim().split(/\s+/).length;
+            return `<tr>
+                <td style="white-space:nowrap; color:#a0aec0;">${fmtDate(l.created_at)}</td>
+                <td><span class="tag tag-s">${esc(l.student || '')}</span></td>
+                <td><div class="clamp2">${esc(l.diary || '')}</div></td>
+                <td style="text-align:center; font-weight:700; color:var(--primary);">${wc}</td>
+                <td><div class="clamp2" style="color:#718096;">${esc(l.response || '')}</div></td>
+            </tr>`;
+        }).join('');
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">⚠️</div><div>読み込みエラー</div></div></td></tr>`;
     }
-    tbody.innerHTML = [...logs].reverse().map(l => {
-        const wc = l.diary.trim().split(/\s+/).length;
-        return `<tr>
-            <td style="white-space:nowrap; color:#a0aec0;">${fmtDate(l.timestamp)}</td>
-            <td><span class="tag tag-s">${esc(l.student)}</span></td>
-            <td><div class="clamp2">${esc(l.diary)}</div></td>
-            <td style="text-align:center; font-weight:700; color:var(--primary);">${wc}</td>
-            <td><div class="clamp2" style="color:#718096;">${esc(l.response)}</div></td>
-        </tr>`;
-    }).join('');
 }
 
-function exportCSV() {
-    const logs = getLogs();
-    if (!logs.length) { alert('ログがありません'); return; }
-    const hdr = ['日時','生徒名','テーマ','英語日記（Before）','語数','AIの返答'];
-    const rows = logs.map(l => [
-        fmtDate(l.timestamp), l.student, l.topic || '',
-        l.diary.replace(/"/g,'""'),
-        l.diary.trim().split(/\s+/).length,
-        l.response.replace(/"/g,'""')
-    ]);
-    const csv = [hdr, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `diary_log_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
+async function exportCSV() {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/logs?order=created_at.desc`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const logs = await res.json();
+        if (!logs.length) { alert('ログがありません'); return; }
+        const hdr = ['日時','生徒名','テーマ','英語日記（Before）','語数','AIの返答'];
+        const rows = logs.map(l => [
+            fmtDate(l.created_at), l.student || '', l.topic || '',
+            (l.diary || '').replace(/"/g,'""'),
+            (l.diary || '').trim().split(/\s+/).length,
+            (l.response || '').replace(/"/g,'""')
+        ]);
+        const csv = [hdr, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `diary_log_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    } catch(e) { alert('エラー：' + e.message); }
 }
 
 function clearLogs() {

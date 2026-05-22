@@ -1,15 +1,16 @@
 export default async function handler(req, res) {
-  // CORSヘッダー
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY;
+  const { message, student, topic, diary } = req.body;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-  if (!apiKey) return res.status(500).json({ error: 'APIキーが設定されていません' });
+  if (!geminiKey) return res.status(500).json({ error: 'APIキーが設定されていません' });
 
   const SYSTEM_PROMPT = `あなたは優しく明るい英語コーチです。英語を始めたばかりの初心者の生徒さんの英語日記を添削します。
 
@@ -39,8 +40,8 @@ export default async function handler(req, res) {
 ※添削箇所がない場合は「完璧です！」と伝えてください`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,13 +53,27 @@ export default async function handler(req, res) {
       }
     );
 
-    if (!response.ok) {
-      const err = await response.json();
-      return res.status(response.status).json({ error: err.error?.message || 'Gemini APIエラー' });
+    if (!geminiRes.ok) {
+      const err = await geminiRes.json();
+      return res.status(geminiRes.status).json({ error: err.error?.message || 'Gemini APIエラー' });
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '返答を取得できませんでした。';
+    const geminiData = await geminiRes.json();
+    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '返答を取得できませんでした。';
+
+    // Supabaseにログを保存
+    if (supabaseUrl && supabaseKey) {
+      await fetch(`${supabaseUrl}/rest/v1/logs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify({ student, topic, diary, response: text })
+      });
+    }
+
     return res.status(200).json({ text });
 
   } catch (err) {
